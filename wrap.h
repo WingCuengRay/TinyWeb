@@ -24,5 +24,7 @@ int open_clientfd(char *hostname, int port);
 
 
 int Rio_writen(int fd, void *usrbuf, size_t n);
+int Select(int nfds, fd_set *readfds, fd_set *writefds, 
+			fd_set *exceptfds, struct timeval *timeout);
 
 #endif

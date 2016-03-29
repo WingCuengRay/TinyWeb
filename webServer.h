@@ -2,6 +2,7 @@
 #define __WEB_SERVER_H
 
 #define __DEBUG
+
 #include "rio.h"
 
 #define MAXLINE 1024

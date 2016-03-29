@@ -3,7 +3,7 @@
 
 #include <unistd.h>
 
-#define RIO_BUFSIZE		8092
+#define RIO_BUFSIZE		4096
 typedef struct
 {
 	int rio_fd;		//与缓冲区绑定的文件描述符的编号

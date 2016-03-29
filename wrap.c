@@ -197,3 +197,15 @@ int Rio_writen(int fd, void *usrbuf, size_t n)
 		unix_error("Rio_writen error!\n");
 	return res;
 }
+
+
+
+int Select(int nfds, fd_set *readfds, fd_set *writefds, 
+			fd_set *exceptfds, struct timeval *timeout)
+{
+	int res = select(nfds, readfds, writefds, exceptfds, timeout);
+	if(res == -1)
+		unix_error("Select error");
+
+	return res;
+}

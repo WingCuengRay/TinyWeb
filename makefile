@@ -1,7 +1,7 @@
-objs := main_server.o rio.c webServer.o wrap.o err.o
+objs := main_server.o rio.c webServer.o wrap.o err.o pool.o
 CFLAGS := -g -O2 -Wall
 
-
+#CFLAGS += -D __DEBUG
 
 webServer: $(objs)
 	gcc $(CFLAGS) -o $@ $^
@@ -14,5 +14,5 @@ plus: plus.o
 	gcc -c $(CFLAGS) -o $@ $^
 
 clean:
-	rm -rf *.o webServer plus
+	rm -rf *.o webServer  webServer_debug plus
 

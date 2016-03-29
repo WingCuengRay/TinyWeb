@@ -5,13 +5,16 @@
 #include <string.h>
 #include "webServer.h"
 #include "wrap.h"
+#include "pool.h"
 
-void doit(int fd);
+void doit(int fd, rio_t *rp);
+void serve_clients(Pool *p);
 
 int main(int argc, char **argv)
 {
 	int listenfd, connfd, port, clientlen;
 	struct sockaddr_in clientaddr;
+	static Pool pool;
 
 	if(argc !=2)
 	{
@@ -19,28 +22,63 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	port = atoi(argv[1]);
+	clientlen = sizeof(clientaddr);
 
 	listenfd = open_listenfd(port);
+	init_pool(listenfd, &pool);		//将监听套接字与缓冲池绑定（初始化）
 	while(1)
 	{
-		clientlen = sizeof(clientaddr);
-		connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t*)&clientlen);
-		doit(connfd);
-		Close(connfd);
+		pool.ready_set = pool.read_set;		//每次select前恢复监听套接字集
+		pool.nready = Select(pool.maxfd+1, &pool.ready_set, NULL, NULL, NULL);
+
+		if(FD_ISSET(listenfd, &pool.ready_set))
+		{
+			connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientlen);
+			add_client(connfd, &pool);
+		}
+		serve_clients(&pool);
 	}	
 	
 	return 0;
 }
 
 
-void doit(int fd)
+
+void serve_clients(Pool *p)
+/**
+ * @brief serve_clients　	服务客户端的请求——连接套接字
+ *
+ * @param p					套接字池
+ **/
 {
-	rio_t rio;
+	int connfd;
+
+	for(int i=0;i<=p->maxi && p->nready>0; i++)
+	{
+		rio_t *rp = &p->clientrio[i];
+		connfd = p->clientfd[i];
+		
+		if((connfd>0) && (FD_ISSET(connfd, &p->ready_set)))
+		{
+			p->nready--;
+			doit(connfd, rp);
+			Close(connfd);		//服务完毕，关闭套接字
+			FD_CLR(connfd, &p->read_set);
+			p->clientfd[i] = -1;
+		}
+	}
+	
+	return;
+}
+
+
+void doit(int fd, rio_t *rp)
+{
 	char buf[MAXLINE];
 	char method[MAXLINE], uri[MAXLINE], version[MAXLINE];
 
-	rio_readinitb(&rio, fd);
-	rio_readlineb(&rio, buf, sizeof(buf));
+	rio_readinitb(rp, fd);
+	rio_readlineb(rp, buf, sizeof(buf));
 	sscanf(buf, "%s %s %s", method, uri, version);
 	if(strcasecmp(method, "GET"))		//若不相等（返回０），则未实现除了GET之外的命令
 	{
@@ -49,12 +87,13 @@ void doit(int fd)
 		return;
 		
 	}
-	read_request_hdrs(&rio);
+	read_request_hdrs(rp);
 
 	//从GET请求行中解析uri
 	char filename[MAXLINE], cgiargs[MAXLINE];
 	struct stat fstat;
 	int is_static = parse_uri(uri, filename, cgiargs);
+
 #ifdef __DEBUG
 	printf("After parse_uri()!\n");
 #endif
