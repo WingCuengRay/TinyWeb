@@ -35,13 +35,20 @@ void clienterror(int fd, char *cause, char *errnum,
 
 	//HTTP相应报文头部
 	sprintf(head, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
-	rio_writen(fd, head, strlen(head));
-	sprintf(head, "Content-type: text/html\r\n");
-	rio_writen(fd, head, strlen(head));
-	sprintf(head, "Conetent-length: %d\r\n\r\n", (int)strlen(body));
-	rio_writen(fd, head, strlen(head));
+	//rio_writen(fd, head, strlen(head));
+	sprintf(head, "%sContent-type: text/html\r\n", head);
+	//rio_writen(fd, head, strlen(head));
+	sprintf(head, "%sConetent-length: %d\r\n\r\n", head, (int)strlen(body));
 
+#ifdef __DEBUG
+	printf("Log: In clienterror(), Before write\n");
+	rio_writen(fd, head, strlen(head));
+#endif
+
+#ifdef __DEBUG
+	printf("Log: In clienterror(), After write\n");
 	rio_writen(fd, body, strlen(body));
+#endif
 }
 
 
@@ -55,6 +62,9 @@ void read_request_hdrs(rio_t *rp)
 	char buf[MAXBUF] = {0};
 
 	rio_readlineb(rp, buf, sizeof(buf));
+#ifdef __DEBUG
+	printf("%s", buf);			//输出请求报文头，易于调试
+#endif
 	while(strcmp(buf, "\r\n"))
 	{
 		rio_readlineb(rp, buf, sizeof(buf));
@@ -147,7 +157,7 @@ void server_static(int sockfd, char *filename, size_t fsize)
 	Close(srcfd);
 	Rio_writen(sockfd, srcp, fsize);
 #ifdef __DEBUG
-	printf("%s", srcp);
+//	printf("%s", srcp);
 #endif
 	Munmap(srcp, fsize);
 	
@@ -192,10 +202,14 @@ void get_filetype(char * const filename, char *filetype)
 {
 	if(strstr(filename, ".html"))
 		strcpy(filetype, "text/html");
-	else if(strstr(filetype, ".gif"))
+	else if(strstr(filename, ".gif"))
 		strcpy(filetype, "image/gif");
-	else if(strstr(filetype, ".jpeg"))
-		strcpy(filetype, "imagge/jpeg");
+	else if(strstr(filename, ".jpeg"))
+		strcpy(filetype, "image/jpeg");
+	else if(strstr(filename, ".mpg") || strstr(filename, ".mpeg"))
+		strcpy(filetype, "video/mpeg");
+	else if(strstr(filename, ".mov"))
+		strcpy(filetype, "video/quicktime");
 	else 
 		strcpy(filetype, "text/plain");
 }

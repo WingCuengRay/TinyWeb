@@ -98,7 +98,7 @@ ssize_t rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
 			*bufp++ = c;
 			if(c == '\n')
 				break;
-	//		if(errno == EINTR)
+	//		if(errno == EINTR)	//在my_read中已经处理了EINTR信号了，所以这里不需要进行处理
 	//			continue;
 	//		else 
 	//			return -1;
